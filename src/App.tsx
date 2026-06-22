@@ -10,7 +10,9 @@ import {
   where,
   updateDoc,
   doc,
+  getDocFromServer,
 } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import firebaseConfig from "../firebase-applet-config.json";
 import { Workout, WorkoutLog, UserSettings } from "./types";
 import { WORKOUTS, DEFAULT_LOGS, getWorkoutForToday } from "./data";
@@ -22,6 +24,65 @@ import SettingsScreen from "./components/SettingsScreen";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const auth = getAuth(app);
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid || null,
+      email: auth.currentUser?.email || null,
+      emailVerified: auth.currentUser?.emailVerified || null,
+      isAnonymous: auth.currentUser?.isAnonymous || null,
+      tenantId: auth.currentUser?.tenantId || null,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
+    }
+  }
+}
+testConnection();
 
 // Default settings object
 const DEFAULT_SETTINGS: UserSettings = {
@@ -79,7 +140,7 @@ export default function App() {
         
         setWorkoutLogs(Array.from(uniqueLogsMap.values()).sort((a,b) => b.timestamp - a.timestamp));
       } catch (e) {
-        console.error("Error fetching logs", e);
+        handleFirestoreError(e, OperationType.GET, "workoutLogs");
       }
     };
     fetchLogs();
@@ -150,7 +211,7 @@ export default function App() {
       }
       setCurrentScreen("ACHIEVEMENT");
     } catch (e) {
-      console.error("Error adding/updating log", e);
+      handleFirestoreError(e, OperationType.WRITE, "workoutLogs");
     }
   };
 

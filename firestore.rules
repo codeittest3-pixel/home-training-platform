@@ -1,8 +1,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Global Safety Net catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128; 
+    }
+
+    function isValidWorkoutLog(data) {
+      return data.keys().hasAll(['id', 'workoutId', 'title', 'dateString', 'timestamp', 'durationMinutes', 'target', 'thumbnail'])
+        && data.keys().size() <= 12
+        && data.id is string && data.id.size() <= 128
+        && data.workoutId is string && data.workoutId.size() <= 128
+        && data.title is string && data.title.size() <= 512
+        && data.dateString is string && data.dateString.size() <= 64
+        && data.timestamp is number
+        && data.durationMinutes is number
+        && data.target is string && data.target.size() <= 128
+        && data.thumbnail is string && data.thumbnail.size() <= 2048;
+    }
+
     match /workoutLogs/{logId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isValidWorkoutLog(request.resource.data) && isValidId(logId);
+      allow update: if isValidWorkoutLog(request.resource.data) && isValidId(logId);
+      allow delete: if true;
     }
   }
 }
