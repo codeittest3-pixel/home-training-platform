@@ -1,0 +1,8 @@
+{
+  "name": "Remix: ⭐️ (수강생 공유용) - 홈트레이닝 플랫폼 서비스",
+  "description": "",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

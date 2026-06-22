@@ -1,0 +1,26 @@
+{
+  "entities": {
+    "WorkoutLog": {
+      "title": "Workout Log",
+      "description": "An entry for a completed workout",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "workoutId": { "type": "string" },
+        "title": { "type": "string" },
+        "dateString": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "durationMinutes": { "type": "number" },
+        "target": { "type": "string" },
+        "thumbnail": { "type": "string" }
+      },
+      "required": ["id", "workoutId", "title", "dateString", "timestamp", "durationMinutes", "target", "thumbnail"]
+    }
+  },
+  "firestore": {
+    "workoutLogs/{logId}": {
+      "schema": "WorkoutLog",
+      "description": "User's workout logs"
+    }
+  }
+}
